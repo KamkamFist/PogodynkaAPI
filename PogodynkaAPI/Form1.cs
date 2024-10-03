@@ -1,5 +1,10 @@
+using System;
+using System.Net.Http;
 using System.Net.Http.Json;
-using static PogodynkaAPI.Form1;
+using System.Timers;
+using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace PogodynkaAPI
 {
@@ -8,70 +13,78 @@ namespace PogodynkaAPI
         public class Current
         {
             public string time { get; set; }
-            public int interval { get; set; }
             public double temperature_2m { get; set; }
             public int relative_humidity_2m { get; set; }
-            public int rain { get; set; }
-            public int showers { get; set; }
-        }
-
-        public class CurrentUnits
-        {
-            public string time { get; set; }
-            public string interval { get; set; }
-            public string temperature_2m { get; set; }
-            public string relative_humidity_2m { get; set; }
-            public string rain { get; set; }
-            public string showers { get; set; }
+            public double rain { get; set; }
+            public double showers { get; set; }
         }
 
         public class Root
         {
-            public double latitude { get; set; }
-            public double longitude { get; set; }
-            public double generationtime_ms { get; set; }
-            public int utc_offset_seconds { get; set; }
-            public string timezone { get; set; }
-            public string timezone_abbreviation { get; set; }
-            public int elevation { get; set; }
-            public CurrentUnits current_units { get; set; }
             public Current current { get; set; }
         }
-
-
-
-
 
         public Form1()
         {
             InitializeComponent();
-
+            timer1.Start();
+            Xdd();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
+        //private async void Form1_Load(object sender, EventArgs e)
+        //{
+        //   await GetWeatherDataAsync();
+        //}
 
+        private async Task GetWeatherDataAsync()
+        {
+            using HttpClient client = new HttpClient { BaseAddress = new Uri("https://api.open-meteo.com/") };
+
+          
+                var response = await client.GetAsync("/v1/forecast?latitude=54.52&longitude=18.41&current=temperature_2m,relative_humidity_2m,rain,showers");
+                response.EnsureSuccessStatusCode();
+
+                var root = await response.Content.ReadFromJsonAsync<Root>();
+
+                if (root?.current != null)
+                {
+                    label1.Text = $"Temperatura: {root.current.temperature_2m} °C\n" +
+                                  $"Wilgotnoœæ: {root.current.relative_humidity_2m} %\n" +
+                                  $"Opady: {root.current.rain} mm";
+
+                    label2.Text = $"Ostatnie przeladowanie: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}";
+                }
+                //else
+                //{
+                //   label1.Text = "Nie uda³o siê pobraæ danych pogodowych.";
+                //}
+            
         }
 
         private async void button1_Click(object sender, EventArgs e)
         {
-            using HttpClient client = new HttpClient { BaseAddress = new Uri("https://api.open-meteo.com/") };
+            await GetWeatherDataAsync();
+        }
 
-            var response = await client.GetAsync("/v1/forecast?latitude=52.52&longitude=13.41&current=temperature_2m,relative_humidity_2m,rain,showers");
-            response.EnsureSuccessStatusCode();
-
-            var root = await response.Content.ReadFromJsonAsync<Root>();
-
-            if (root?.current != null)
+        //int czas = 0;
+        private void Load(object sender, EventArgs e)
+        {
+            timer1.Tick += async (s, e) =>
             {
-                label1.Text = $"Temperatura: {root.current.temperature_2m} °C\n" +
-                              $"Wilgotnoœæ: {root.current.relative_humidity_2m} %\n" +
-                              $"Opady: {root.current.rain} mm";
-            }
-            else
-            {
-                label1.Text = "Brak danych.";
-            }
+                await GetWeatherDataAsync();
+            };
+           //czas++;
+            //label2.Text = czas.ToString();
+        }
+
+        async void Xdd()
+        {
+            await GetWeatherDataAsync();
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
